@@ -5,7 +5,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from JoNet_DeHazeCommon import c_JoNet_ImgLiBeryWrapper, c_JoNet_ImgCusTomWrapper
+from JoNet_DeHazeLiberyCommon import c_JoNet_ImgLiBeryWrapper
+from JoNet_DeHazeUserDefineCommon import c_JoNet_ImgCusTomWrapper
 
 class ImageProcessingTester:
 
