@@ -3,7 +3,7 @@ import random
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv2D, ReLU, MaxPooling2D, UpSampling2D, Layer, Conv2DTranspose
+from tensorflow.keras.layers import Input, Conv2D, ReLU, MaxPooling2D, UpSampling2D, Layer
 import cv2
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -34,8 +34,8 @@ class DehazingAutoencoder:
         inputs = Input(shape=input_shape)
         encoded = self.encoder(inputs)
         decoded = self.decoder(encoded)
-        # custom_loss_layer = CustomLossLayer()([decoded, inputs])
-        self.model = Model(inputs, decoded)
+        custom_loss_layer = CustomLossLayer()([decoded, inputs])
+        self.model = Model(inputs, custom_loss_layer)
         self.model.compile(optimizer='adam')
 
     def encoder(self, inputs):
@@ -52,13 +52,13 @@ class DehazingAutoencoder:
 
     def decoder(self, encoded):
         x = UpSampling2D((2, 2))(encoded)
-        x = Conv2DTranspose(16, (3, 3), padding='same')(x)
+        x = Conv2D(16, (3, 3), padding='same')(x)
         x = ReLU()(x)
         x = UpSampling2D((2, 2))(x)
-        x = Conv2DTranspose(32, (3, 3), padding='same')(x)
+        x = Conv2D(32, (3, 3), padding='same')(x)
         x = ReLU()(x)
         x = UpSampling2D((2, 2))(x)
-        x = Conv2DTranspose(64, (3, 3), padding='same')(x)
+        x = Conv2D(64, (3, 3), padding='same')(x)
         x = ReLU()(x)
         decoded = Conv2D(3, (3, 3), padding='same', activation='sigmoid')(x)
         return decoded
@@ -92,8 +92,8 @@ class DehazingAutoencoder:
                 image = self.load_and_preprocess_image(image_name)
                 loss = self.train_step(image)
                 epoch_losses.append(loss)
-            # train_loss = np.mean(epoch_losses)
-            # print(f'Train loss: {train_loss:.4f}')
+            train_loss = np.mean(epoch_losses)
+            print(f'Train loss: {train_loss:.4f}')
 
     def train_modelSampleGen(self, num_epochs):
         for epoch in range(num_epochs):
@@ -103,8 +103,8 @@ class DehazingAutoencoder:
                 image = self.generate_random_image()
                 loss = self.train_step(image)
                 epoch_losses.append(loss)
-            # train_loss = np.mean(epoch_losses)
-            # print(f'Train loss: {train_loss:.4f}')
+            train_loss = np.mean(epoch_losses)
+            print(f'Train loss: {train_loss:.4f}')
 
     @tf.function
     def train_step(self, image):
@@ -112,6 +112,8 @@ class DehazingAutoencoder:
             reconstructed = self.model(image, training=True)
             loss = tf.reduce_sum(self.model.losses)
         gradients = tape.gradient(loss, self.model.trainable_variables)
+        # Add a debug print statement
+        # tf.print("Gradients:", gradients)
         self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
         return loss
 
@@ -150,8 +152,8 @@ def load_image_filenames(hazefree_dir, hazed_dir):
 
 if __name__ == "__main__":
     ImgFlag     = True
-    num_epochs  = 20
-    numOfSample = 400
+    num_epochs  = 5
+    numOfSample = 40
     
     if ImgFlag:
         hazefree_dir = 'Test_Image/HazeFre_v0.001'
@@ -162,7 +164,7 @@ if __name__ == "__main__":
         autoencoder.train_model(num_epochs=num_epochs, HazedFlag=False)
         autoencoder.train_model(num_epochs=num_epochs, HazedFlag=True)
         # autoencoder.test_model(num_epochs=num_epochs, test_images = HaZed_names[0:3])
-        sample_image_path = 'Test_Image/Haze_158.jpg'
+        sample_image_path = 'Test_Image/Sample_image.png'
         dehazed_image = autoencoder.dehaze_image(sample_image_path)
         plt.imshow(dehazed_image)
         plt.title('Dehazed Image')
